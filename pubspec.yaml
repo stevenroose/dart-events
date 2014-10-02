@@ -1,0 +1,9 @@
+name: events
+version: 0.1.0
+author: Steven Roose <stevenroose@gmail.com>
+description: A library for event handling in Dart.
+homepage: https://github.com/stevenroose/dart-events
+dependencies:
+dev_dependencies:
+  browser: any
+  unittest: any
