@@ -7,3 +7,5 @@ dependencies:
 dev_dependencies:
   browser: any
   unittest: any
+  streamers:
+    git: https://github.com/0xor1/streamers
