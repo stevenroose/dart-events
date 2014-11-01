@@ -17,7 +17,6 @@ class _Event {
  * Used solely to differentiate between an unset parameter and an explicit null value.
  */
 class _Nothing {
-  static const N = const _Nothing();
   const _Nothing();
 }
 
@@ -43,7 +42,8 @@ dynamic _eventDataMapper(_Event event) => event.data;
  */
 class Events {
 
-  StreamController<_Event> _eventStream = new StreamController<_Event>.broadcast();
+  final StreamController<_Event> _eventStreamController = new StreamController<_Event>.broadcast();
+
 
   /**
    * Emit a new event.
@@ -69,13 +69,11 @@ class Events {
    * set data to null explicitly, like this:
    *     emit("event_type", null)
    */
-  void emit(dynamic event, [dynamic data = _Nothing.N]) {
-    if(data is _Nothing) {
-      _eventStream.add(new _Event(event.runtimeType, event));
-    }
-    else {
-      _eventStream.add(new _Event(event, data));
-    }
+  void emit(dynamic event, [dynamic data = const _Nothing()]) {
+    if(data is _Nothing)
+      _eventStreamController.add(new _Event(event.runtimeType, event));
+    else
+      _eventStreamController.add(new _Event(event, data));
   }
 
   /**
@@ -102,8 +100,8 @@ class Events {
    */
   dynamic on([dynamic eventType, Function onEvent]) {
     Stream filteredStream = eventType != null ?
-        _eventStream.stream.where(_eventTypeMatcher(eventType)).map(_eventDataMapper) :
-        _eventStream.stream.map(_eventDataMapper);
+        _eventStreamController.stream.where(_eventTypeMatcher(eventType)).map(_eventDataMapper) :
+        _eventStreamController.stream.map(_eventDataMapper);
     return onEvent != null ? filteredStream.listen(onEvent) : filteredStream;
   }
 
@@ -117,7 +115,7 @@ class Events {
    *     eventObject.once(Error, (e) => throw e)
    */
   Future once([dynamic eventType, Function onEvent]) {
-    Future onceEvent = _eventStream.stream.firstWhere(_eventTypeMatcher(eventType)).then(_eventDataMapper);
+    Future onceEvent = _eventStreamController.stream.firstWhere(_eventTypeMatcher(eventType)).then(_eventDataMapper);
     if(onEvent != null)
       onceEvent.then(onEvent);
     return onceEvent;
