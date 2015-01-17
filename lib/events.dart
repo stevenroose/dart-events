@@ -4,6 +4,8 @@ import "dart:async";
 @MirrorsUsed(override: "*", symbols: "")
 import "dart:mirrors";
 
+import "package:stevenroose/lru_map.dart";
+
 /**
  * Used internally to represent an event and the accompanying data.
  */
@@ -19,6 +21,7 @@ class _Event {
 class _Nothing {
   const _Nothing();
 }
+const _nothing = const _Nothing();
 
 /**
  * Returns a function that is used to filter a stream for events of type [eventType].
@@ -42,7 +45,20 @@ dynamic _eventDataMapper(_Event event) => event.data;
  */
 class Events {
 
+  /**
+   * The controller of the main event stream.
+   */
   final StreamController<_Event> _eventStreamController = new StreamController<_Event>.broadcast();
+
+  /**
+   * Stream cache.
+   * Caching filtered streams avoids creating a new WhereStream every time [on()] is called and
+   * reduces the amount of CPU work for new events when there are a lot of subscribers.
+   *
+   * The number of cached event streams is chosen arbitrarily.
+   */
+  static const int _STREAM_CACHE = 25;
+  final LRUMap _streamCache = new LRUMap(capacity: _STREAM_CACHE);
 
 
   /**
@@ -69,8 +85,8 @@ class Events {
    * set data to null explicitly, like this:
    *     emit("event_type", null)
    */
-  void emit(dynamic event, [dynamic data = const _Nothing()]) {
-    if(data is _Nothing)
+  void emit(dynamic event, [dynamic data = _nothing]) {
+    if(data == _nothing)
       _eventStreamController.add(new _Event(event.runtimeType, event));
     else
       _eventStreamController.add(new _Event(event, data));
@@ -98,12 +114,29 @@ class Events {
    *     var sub = emitter.on(Error, (e) => print(e));
    *     sub.cancel();
    */
-  dynamic on([dynamic eventType, Function onEvent]) {
-    Stream filteredStream = eventType != null ?
-        _eventStreamController.stream.where(_eventTypeMatcher(eventType)).map(_eventDataMapper) :
-        _eventStreamController.stream.map(_eventDataMapper);
+  dynamic/*Stream|StreamSubscription*/ on([dynamic eventType, Function onEvent]) {
+    Stream filteredStream = _getFilteredStream(eventType);
     return onEvent != null ? filteredStream.listen(onEvent) : filteredStream;
   }
+
+  /**
+   * Tries to fetch the stream from cache and creates and caches the stream of it was not cached.
+   */
+  Stream _getFilteredStream(dynamic eventType) {
+    Stream stream = _streamCache[eventType];
+    if(stream == null) {
+      stream = _createFilteredStream(eventType);
+      _streamCache[eventType] = stream;
+    }
+    return stream;
+  }
+
+  /**
+   * Create a stream that filters events of type [eventType].
+   */
+  Stream _createFilteredStream(dynamic eventType) => eventType != null ?
+      _eventStreamController.stream.where(_eventTypeMatcher(eventType)).map(_eventDataMapper) :
+      _eventStreamController.stream.map(_eventDataMapper);
 
   /**
    * Wait for the first occurrence of type [eventType].
