@@ -148,7 +148,7 @@ class Events {
    *     eventObject.once(Error, (e) => throw e)
    */
   Future once([dynamic eventType, Function onEvent]) {
-    Future onceEvent = _eventStreamController.stream.firstWhere(_eventTypeMatcher(eventType)).then(_eventDataMapper);
+    Future onceEvent = _getFilteredStream(eventType).first;
     if(onEvent != null)
       onceEvent.then(onEvent);
     return onceEvent;
