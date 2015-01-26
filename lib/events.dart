@@ -27,10 +27,12 @@ const _nothing = const _Nothing();
  * Returns a function that is used to filter a stream for events of type [eventType].
  */
 Function _eventTypeMatcher(dynamic eventType) => (_Event event) {
-  if(eventType == event.type)
+  if(eventType == event.type) {
     return true;
-  if(eventType is Type && event.type is Type)
+  }
+  if(eventType is Type && event.type is Type) {
     return reflectType(event.type).isSubtypeOf(reflectType(eventType));
+  }
   return false;
 };
 
@@ -57,8 +59,8 @@ class Events {
    *
    * The number of cached event streams is chosen arbitrarily.
    */
-  static const int _STREAM_CACHE = 25;
-  final LRUMap _streamCache = new LRUMap(capacity: _STREAM_CACHE);
+  static const int _STREAM_CACHE_SIZE = 25;
+  final LRUMap _streamCache = new LRUMap(capacity: _STREAM_CACHE_SIZE);
 
 
   /**
@@ -86,10 +88,11 @@ class Events {
    *     emit("event_type", null)
    */
   void emit(dynamic event, [dynamic data = _nothing]) {
-    if(data == _nothing)
+    if(data == _nothing) {
       _eventStreamController.add(new _Event(event.runtimeType, event));
-    else
+    } else {
       _eventStreamController.add(new _Event(event, data));
+    }
   }
 
   /**
@@ -149,9 +152,7 @@ class Events {
    */
   Future once([dynamic eventType, Function onEvent]) {
     Future onceEvent = _getFilteredStream(eventType).first;
-    if(onEvent != null)
-      onceEvent.then(onEvent);
-    return onceEvent;
+    return onEvent != null ? onceEvent.then(onEvent) : onceEvent;
   }
 }
 
@@ -165,13 +166,29 @@ class Events {
  *     EventType<Result> finished = new EventType<Result>();
  *     emitter.on(finished).listen((Result res) => handleResult(res));
  *
- * It can also be used as an interface or superclass as follows:
+ * The recommended way of specifying event types for an emitter class, is to define
+ * them in static variables using the EventType class.
+ *
+ *     class MyEmitter extends Object with Events {
+ *       static final EventType FINISHED = new EventType<Result>();
+ *       void doAsyncStuff() {
+ *         [...]
+ *         emit(FINISHED, resultingData);
+ *       }
+ *     }
+ *
+ *     void main() {
+ *       myEmitter.on(MyEmitter.FINISHED).listen((Result result) => useResult(result));
+ *     }
+ *
+ * In Java, the most common way to describe event types is to use inner classes
+ * like in the example above. However Dart does not support this. One way around
+ * the restriction is to do something like this example:
+ *
  *     class ResultEvent extends EventType<Result> {}
  *     class Finished extends ResultEvent {}
  *     emitter.on(Finished).listen((Result res) => handleResult(res));
  *
- * In Java, this is the most common way to describe events, but it
- * is almost always done using inner classes, which Dart does not support.
  */
 class EventType<T> {
   EventType();
