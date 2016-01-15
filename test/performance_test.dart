@@ -1,3 +1,6 @@
+// The MIT License (MIT)
+// Copyright (c) 2016 Steven Roose
+
 library events.test.performance;
 
 import 'package:events/events.dart';

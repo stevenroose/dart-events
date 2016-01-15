@@ -1,3 +1,6 @@
+// The MIT License (MIT)
+// Copyright (c) 2016 Steven Roose
+
 import 'package:streamers/streamers.dart';
 import 'dart:async';
 
